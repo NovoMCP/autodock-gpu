@@ -1,0 +1,28 @@
+NovoMCP autodock-gpu
+Copyright 2026 Quant NexusAI Inc. (NovoMCP)
+
+The code in this repository is licensed under the Apache License, Version 2.0.
+See the LICENSE file for the full text.
+
+This service builds or installs the following third-party components at
+container-build time. They are NOT redistributed in this repository; each is
+fetched from its upstream source and governed by its own license.
+
+Built from source (see Dockerfile):
+  - AutoDock-GPU (ccsb-scripps)
+      https://github.com/ccsb-scripps/AutoDock-GPU
+      Under its own license, see upstream.
+  - AutoGrid (ccsb-scripps)
+      https://github.com/ccsb-scripps/AutoGrid
+      Under its own license, see upstream.
+
+Python / system dependencies (installed via pip or apt, each under its own
+license; see the respective project for details):
+  - Meeko        https://github.com/forlilab/Meeko
+  - OpenBabel    https://github.com/openbabel/openbabel
+  - RDKit        https://github.com/rdkit/rdkit
+  - ProDy        https://github.com/prody/ProDy
+  - Biopython    https://github.com/biopython/biopython
+  - PLIP         https://github.com/pharmai/plip
+
+Refer to each upstream project for its exact license terms.
