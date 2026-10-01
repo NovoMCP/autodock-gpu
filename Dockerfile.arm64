@@ -1,0 +1,72 @@
+# AutoDock-GPU Service — arm64 / NVIDIA GB10 (Grace Blackwell, sm_121) build.
+#
+# Separate from the amd64 `Dockerfile` (which stays on cuda:11.8 for existing x86
+# GPU hosts — no driver/base regression). This variant targets DGX Spark: CUDA 13
+# base + sm_121. Verified end-to-end on a live GB10 (2026-09-28): autodock_gpu
+# and autogrid4 build natively and a 1stp dock runs on the GPU (ptxas emits
+# 'sm_121' kernels; best pose -8.28 kcal/mol). Built natively on an arm64 host
+# (a Spark) — arm64 CUDA compiles are impractical under QEMU.
+FROM nvidia/cuda:13.0.1-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=$CUDA_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+
+WORKDIR /opt
+
+RUN apt-get update && apt-get install -y \
+    wget \
+    git \
+    build-essential \
+    cmake \
+    python3-pip \
+    python3-dev \
+    libboost-all-dev \
+    openbabel \
+    python3-openbabel \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build AutoDock-GPU from source for sm_121. The CUDA backend takes the target
+# arch via TARGETS (NOT the amd64 image's DEVICE=GPU default, which would emit
+# no sm_121 kernels -> "no kernel image available" on GB10). Verified on GB10:
+# `ptxas ... for 'sm_121'`.
+RUN git clone https://github.com/ccsb-scripps/AutoDock-GPU.git && \
+    cd AutoDock-GPU && \
+    make DEVICE=CUDA TARGETS=121 NUMWI=128 \
+        GPU_INCLUDE_PATH=/usr/local/cuda/include GPU_LIBRARY_PATH=/usr/local/cuda/lib64 && \
+    cp bin/autodock_gpu_128wi /usr/local/bin/autodock_gpu && \
+    chmod +x /usr/local/bin/autodock_gpu && \
+    cd / && rm -rf /opt/AutoDock-GPU
+
+# AutoGrid4 (grid-map generation) — autoreconf/configure build; verified to
+# build and run on aarch64 on the Spark (generated the 1stp maps for the dock).
+RUN apt-get update && apt-get install -y autoconf automake libtool csh && rm -rf /var/lib/apt/lists/* && \
+    git clone https://github.com/ccsb-scripps/AutoGrid.git && \
+    cd AutoGrid && \
+    autoreconf -i && \
+    mkdir build && cd build && \
+    ../configure && \
+    make -j"$(nproc)" && \
+    cp autogrid4 /usr/local/bin/ && \
+    chmod +x /usr/local/bin/autogrid4 && \
+    cd / && rm -rf /opt/AutoGrid
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir meeko plip
+
+COPY main.py .
+
+ENV PORT=8022
+ENV PYTHONUNBUFFERED=1
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8022/health || exit 1
+
+EXPOSE 8022
+
+CMD ["python3", "main.py"]
