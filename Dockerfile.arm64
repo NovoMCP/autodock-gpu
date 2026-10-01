@@ -6,7 +6,7 @@
 # and autogrid4 build natively and a 1stp dock runs on the GPU (ptxas emits
 # 'sm_121' kernels; best pose -8.28 kcal/mol). Built natively on an arm64 host
 # (a Spark) — arm64 CUDA compiles are impractical under QEMU.
-FROM nvidia/cuda:13.0.1-devel-ubuntu24.04
+FROM nvidia/cuda:13.0.1-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CUDA_HOME=/usr/local/cuda
@@ -56,8 +56,8 @@ RUN apt-get update && apt-get install -y autoconf automake libtool csh && rm -rf
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
-RUN pip3 install --no-cache-dir --break-system-packages meeko plip
+RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir meeko plip
 
 COPY main.py .
 
