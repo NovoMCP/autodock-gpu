@@ -79,6 +79,7 @@ curl -X POST http://localhost:8022/dock \
 - `reference_ligand_smiles` (string, optional): reference ligand for co-docking. If omitted, the co-crystallized ligand is auto-extracted from the PDB.
 - `enable_reference_docking` (bool, optional): dock a reference ligand and report `delta_vs_reference_kcal`. Default true.
 - `protonation_ph` (float, optional): pH for protonation. Default 7.4.
+- `return_pose_pdb` (bool, optional): add `pose_pdb` to each pose: its atoms as PDB `HETATM` lines (heavy atoms plus polar H, in the receptor's frame), for starting MD or other modelling from the docked pose. Default false.
 
 **Response** (`DockingResult`):
 ```json
