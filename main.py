@@ -102,6 +102,12 @@ class DockingRequest(BaseModel):
                     "delta_vs_reference_kcal alongside candidate affinity."
     )
     protonation_ph: float = Field(7.4, description="pH for ligand and receptor protonation", ge=1.0, le=14.0)
+    return_pose_pdb: bool = Field(
+        False,
+        description="If True, each pose carries `pose_pdb`: its atoms as PDB HETATM "
+                    "lines (heavy atoms + polar H, receptor frame) — e.g. to start MD "
+                    "from the docked pose.",
+    )
 
 class DockingResult(BaseModel):
     docking_id: str
@@ -1568,6 +1574,14 @@ async def dock_molecule(request: DockingRequest, background_tasks: BackgroundTas
                 #
                 # Fail-open: PLIP errors are logged and the pose keeps an empty
                 # contacts list. Never blocks the docking response.
+                # Pose structures for callers that build on the pose (gromacs-md
+                # starts protein-ligand MD from it). Taken before the PLIP pass
+                # below consumes the internal PDBQT block.
+                if request.return_pose_pdb:
+                    for pose in poses:
+                        if pose.get("_pdbqt_block"):
+                            pose["pose_pdb"] = pdbqt_to_pdb_atom_lines(pose["_pdbqt_block"])
+
                 clean_receptor_path = temp_path / "receptor.pdb"
                 candidate_reference_interactions = None
                 if clean_receptor_path.exists():
